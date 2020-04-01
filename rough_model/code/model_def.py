@@ -12,6 +12,7 @@ from keras import backend as K
 sys.setrecursionlimit(3000)
 
 K.set_image_data_format('channels_last')
+bn_axis = 3
 K.set_floatx('float32')
 smallest_layer = 32
 
@@ -167,14 +168,7 @@ def resnet152_model(n_classes, weights_path=None):
     '''
     eps = 1.1e-5
 
-    # Handle Dimension Ordering for different backends
-    global bn_axis
-    if K.image_dim_ordering() == 'tf':
-        bn_axis = 3
-        img_input = Input(shape=(224, 224, 3), name='data')
-    else:
-        bn_axis = 1
-        img_input = Input(shape=(3, 224, 224), name='data')
+    img_input = Input(shape=(224, 224, 3), name='data')
 
     x = ZeroPadding2D((3, 3), name='conv1_zeropadding')(img_input)
     x = Conv2D(64, (7, 7), strides=(2, 2), name='conv1', use_bias=False, trainable=False)(x)
