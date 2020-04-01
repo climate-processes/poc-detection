@@ -6,23 +6,25 @@ import argparse
 # Patch the tf 2 available gpus fn
 import tensorflow as tf
 import keras.backend.tensorflow_backend as tfback
+from packaging import version
 print("tf.__version__ is", tf.__version__)
 print("tf.keras.__version__ is:", tf.keras.__version__)
 
-def _get_available_gpus():
-    """Get a list of available gpu devices (formatted as strings).
+if version.parse(tf.__version__) >= version.parse("2.1.0"):
+    def _get_available_gpus():
+        """Get a list of available gpu devices (formatted as strings).
 
-    # Returns
-        A list of available GPU devices.
-    """
-    #global _LOCAL_DEVICES
-    if tfback._LOCAL_DEVICES is None:
-        devices = tf.config.list_logical_devices()
-        tfback._LOCAL_DEVICES = [x.name for x in devices]
-    return [x for x in tfback._LOCAL_DEVICES if 'device:gpu' in x.lower()]
+        # Returns
+            A list of available GPU devices.
+        """
+        #global _LOCAL_DEVICES
+        if tfback._LOCAL_DEVICES is None:
+            devices = tf.config.list_logical_devices()
+            tfback._LOCAL_DEVICES = [x.name for x in devices]
+        return [x for x in tfback._LOCAL_DEVICES if 'device:gpu' in x.lower()]
 
-tfback._get_available_gpus = _get_available_gpus
-####
+    tfback._get_available_gpus = _get_available_gpus
+    ####
 
 from refined_model.code.model_def import get_model as get_refined_model
 from rough_model.code.model_def import get_model as get_rough_model
@@ -51,17 +53,18 @@ if __name__ == '__main__':
     parser.add_argument('input', help="Input numpy stack of images")
     parser.add_argument('weights', help="Path to pre-trained model weights")
     parser.add_argument('-o', '--output', help="Output numpy mask stack file name", default='poc_mask.npz')
-    parser.add_argument('-b', '--batch_size', help="Batch size", default=1)
+    parser.add_argument('-b', '--batch_size', help="Batch size", default=1, type=int)
     parser.add_argument('-n', '--no_gpus', help="Number of GPUs to use", default=1, type=int)
-    parser.add_argument('-e', '--n_epochs', help="Number of epochs to run", default=1)
-    parser.add_argument('-l', '--learning_rate', help="(Starting) Learning rate ", default=0.01)
-    parser.add_argument('-d', '--decay_rate', help="Decay rate", default=0.0)
+    parser.add_argument('-e', '--n_epochs', help="Number of epochs to run", default=1, type=int)
+    parser.add_argument('-l', '--learning_rate', help="(Starting) Learning rate ", default=0.01, type=float)
+    parser.add_argument('-d', '--decay_rate', help="Decay rate", default=0.0, type=float)
 
     # Gets command line args by default
     args = parser.parse_args()
 
-    importdataset = np.memmap(args.input)
-    dataset = 2 * (importdataset / 255.) - 1
+    importdataset = np.load(args.input)['arr_0']
+    # Only take the first three channels (ignore alpha) and rescale
+    dataset = 2 * (importdataset[..., :3] / 255.) - 1
 
     print('Input dataset shape = ', dataset.shape)
 
@@ -72,7 +75,7 @@ if __name__ == '__main__':
                                            args.decay_rate, args.no_gpus)
 
     # create the rough masks
-    mask = rough_mask_model.predict(dataset, batch_size=4*args.no_gpus)
+    mask = rough_mask_model.predict(dataset, batch_size=args.batch_size*args.no_gpus)
 
     # How many rough POCs?
     print("Roughly detected POCs: {}".format(mask.any(axis=0).sum()))
@@ -82,7 +85,7 @@ if __name__ == '__main__':
     dataset_masked = get_masked_dataset(mask, dataset)
 
     # refine the masked dataset
-    refined_mask = refined_mask_model.predict(dataset_masked, batch_size=4*args.no_gpus)
+    refined_mask = refined_mask_model.predict(dataset_masked, batch_size=args.batch_size*args.no_gpus)
 
     # Create the final mask
     pre = refined_mask >= 0.5
@@ -90,5 +93,5 @@ if __name__ == '__main__':
     # How many rough POCs?
     print("Final detected POCs: {}".format(mask.any(axis=0).sum()))
 
-    pre.savez_compressed(args.output)
+    np.savez_compressed(args.output, mask=pre)
     print("Done.")

@@ -265,12 +265,13 @@ def get_model(weights_file='rough_model_weights.h5', learning_rate=0.001, weight
     # create the rough mask model and load the weights
 
     if no_gpus > 1:
-        rough_mask_model = multi_gpu_model(resnet152_model(1), gpus=no_gpus)
+        rough_mask_model = multi_gpu_model(resnet152_model(1, weights_path=weights_file), gpus=no_gpus)
     else:
-        rough_mask_model = resnet152_model(1)
+        rough_mask_model = resnet152_model(1, weights_path=weights_file)
 
     optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=None, decay=weight_decay, amsgrad=True)
     rough_mask_model.compile(optimizer=optimizer,
                              loss=dice_coef_loss, metrics=[dice_coef, 'accuracy', 'binary_crossentropy'])
 
-    rough_mask_model.load_weights(weights_file)
+    #rough_mask_model.load_weights(weights_file)
+    return rough_mask_model

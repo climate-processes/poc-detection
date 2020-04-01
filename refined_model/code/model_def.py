@@ -126,13 +126,17 @@ def dice_coef_loss(y_true, y_pred):
 def get_model(weights_file='refine_model_weights.h5', learning_rate=0.001, weight_decay=0.0, no_gpus=1):
     # create the refined mask model and load the weights
 
+    resunet_model = RESUNETMEDIUM((224, 224, 3), 1)
+    
+    resunet_model.load_weights(weights_file)
+
     if no_gpus > 1:
-        refined_mask_model = multi_gpu_model(RESUNETMEDIUM((224, 224, 3), 1), gpus=no_gpus)
+        refined_mask_model = multi_gpu_model(resunet_model, gpus=no_gpus)
     else:
-        refined_mask_model = RESUNETMEDIUM((224, 224, 3), 1)
+        refined_mask_model = resunet_model
 
     optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=None, decay=weight_decay, amsgrad=True)
     refined_mask_model.compile(optimizer=optimizer,
                                loss=dice_coef_loss, metrics=[dice_coef, 'accuracy', 'binary_crossentropy'])
 
-    refined_mask_model.load_weights(weights_file)
+    return refined_mask_model
