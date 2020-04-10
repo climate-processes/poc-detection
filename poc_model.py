@@ -67,7 +67,7 @@ if __name__ == '__main__':
     # Set verbosity
     if args.verbose == 1:
         logging.getLogger().setLevel(logging.INFO)
-    elif rgs.verbose == 2:
+    elif args.verbose == 2:
         logging.getLogger().setLevel(logging.DEBUG)
 
     importdataset = np.load(args.input)
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     print('Input dataset shape = ', dataset.shape)
 
-    rough_mask_model = get_rough_model(args.weights + 'rough_model_weights_new.h5', args.learning_rate,
+    rough_mask_model = get_rough_model(args.weights + 'rough_model_weights.h5', args.learning_rate,
                                        args.decay_rate, args.no_gpus)
 
     refined_mask_model = get_refined_model(args.weights+'refine_model_weights.h5', args.learning_rate,
@@ -90,11 +90,13 @@ if __name__ == '__main__':
     mask = rough_mask_model.predict(dataset, batch_size=args.batch_size*args.no_gpus)
 
     # How many rough POCs?
-    print("Roughly detected POCs: {}".format(mask.any(axis=0).sum()))
+    print("Roughly detected POCs: {}".format(mask.any(axis=(1,2,3)).sum()))
     # TODO I might be able to speed up the following by only applying it to this subset of images
+    np.savez_compressed('rough.npz', mask=mask >= 0.5)
 
     # dilate them and apply to the dataset
     dataset_masked = get_masked_dataset(mask, dataset)
+    np.savez_compressed('dilated_mask.npz', mask=dataset_masked >= 0.5)
 
     # refine the masked dataset
     refined_mask = refined_mask_model.predict(dataset_masked, batch_size=args.batch_size*args.no_gpus)
@@ -103,7 +105,7 @@ if __name__ == '__main__':
     pre = refined_mask >= 0.5
 
     # How many rough POCs?
-    print("Final detected POCs: {}".format(mask.any(axis=0).sum()))
+    print("Final detected POCs: {}".format(mask.any(axis=(1,2,3)).sum()))
 
     np.savez_compressed(args.output, mask=pre)
     print("Done.")
