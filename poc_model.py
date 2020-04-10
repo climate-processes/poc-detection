@@ -2,6 +2,7 @@
 import numpy as np
 import os
 import argparse
+import logging
 
 # Patch the tf 2 available gpus fn
 import tensorflow as tf
@@ -58,11 +59,22 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--n_epochs', help="Number of epochs to run", default=1, type=int)
     parser.add_argument('-l', '--learning_rate', help="(Starting) Learning rate ", default=0.01, type=float)
     parser.add_argument('-d', '--decay_rate', help="Decay rate", default=0.0, type=float)
+    parser.add_argument('-v', '--verbose', action='count', help="Increase the level of logging information output to screen")
 
     # Gets command line args by default
     args = parser.parse_args()
 
-    importdataset = np.load(args.input)['arr_0']
+    # Set verbosity
+    if args.verbose == 1:
+        logging.getLogger().setLevel(logging.INFO)
+    elif rgs.verbose == 2:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    importdataset = np.load(args.input)
+    # Check for Npz style access
+    if isinstance(importdataset, np.lib.npyio.NpzFile):
+        importdataset = importdataset['arr_0']
+
     # Only take the first three channels (ignore alpha) and rescale
     dataset = 2 * (importdataset[..., :3] / 255.) - 1
 
