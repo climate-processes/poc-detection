@@ -1,3 +1,6 @@
+"""
+POC detection script
+"""
 #!/usr/bin/env python
 import numpy as np
 import os
@@ -76,7 +79,7 @@ if __name__ == '__main__':
         importdataset = importdataset['arr_0']
 
     # Only take the first three channels (ignore alpha) and rescale
-    dataset = 2 * (importdataset[..., :3] / 255.) - 1
+    dataset = 2 * (importdataset[:300,..., :3] / 255.) - 1
 
     print('Input dataset shape = ', dataset.shape)
 

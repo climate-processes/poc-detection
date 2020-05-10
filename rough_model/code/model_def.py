@@ -244,7 +244,7 @@ def resnet152_model(n_classes, weights_path=None):
 
     # load weights
     if weights_path:
-        model.load_weights(weights_path, by_name=True)
+        model.load_weights(weights_path, by_name=False)
 
     return model
 
