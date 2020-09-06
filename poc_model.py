@@ -1,7 +1,7 @@
+#!/usr/bin/env python
 """
 POC detection script
 """
-#!/usr/bin/env python
 import numpy as np
 import os
 import argparse
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         importdataset = importdataset['arr_0']
 
     # Only take the first three channels (ignore alpha) and rescale
-    dataset = 2 * (importdataset[:300,..., :3] / 255.) - 1
+    dataset = 2 * (importdataset[..., :3] / 255.) - 1
 
     print('Input dataset shape = ', dataset.shape)
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     pre = refined_mask >= 0.5
 
     # How many rough POCs?
-    print("Final detected POCs: {}".format(mask.any(axis=(1,2,3)).sum()))
+    print("Final detected POCs: {}".format(pre.any(axis=(1,2,3)).sum()))
 
     np.savez_compressed(args.output, mask=pre)
     print("Done.")
