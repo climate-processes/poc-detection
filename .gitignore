@@ -2,6 +2,11 @@
 *.np
 *.np?
 *.h5
+*.txt
+*.csv
+
+# Images
+*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
