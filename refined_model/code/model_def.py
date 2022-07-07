@@ -1,11 +1,10 @@
 import sys
 
-from keras.layers import Input, Conv2D, MaxPooling2D, ZeroPadding2D, Activation, add, Concatenate, Add, UpSampling2D, Dropout
-from keras.optimizers import Adam
-from keras.utils import multi_gpu_model
-from keras.layers.normalization import BatchNormalization
-from keras.models import Model
-from keras import backend as K
+from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, ZeroPadding2D, Activation, Concatenate, Add, UpSampling2D, Dropout
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.models import Model
+from tensorflow.keras import backend as K
 
 sys.setrecursionlimit(3000)
 
@@ -107,7 +106,7 @@ def RESUNETMEDIUM(input_shape, n_classes):
     conv10 = Conv2D(n_classes, 3, activation='sigmoid', padding='same', kernel_initializer='he_normal')(add9)
     # sigmoid probably too strong an activation
 
-    model = Model(input=inputs, output=conv10)
+    model = Model(inputs, conv10)
 
     return model
 
@@ -123,17 +122,13 @@ def dice_coef_loss(y_true, y_pred):
     return 1 - dice_coef(y_true, y_pred)
 
 
-def get_model(weights_file='refine_model_weights.h5', learning_rate=0.001, weight_decay=0.0, no_gpus=1):
+def get_model(weights_file=None, learning_rate=0.001, weight_decay=0.0):
     # create the refined mask model and load the weights
 
-    resunet_model = RESUNETMEDIUM((224, 224, 3), 1)
-    
-    resunet_model.load_weights(weights_file)
+    refined_mask_model = RESUNETMEDIUM((224, 224, 3), 1)
 
-    if no_gpus > 1:
-        refined_mask_model = multi_gpu_model(resunet_model, gpus=no_gpus)
-    else:
-        refined_mask_model = resunet_model
+    if weights_file is not None:
+        refined_mask_model.load_weights(weights_file)
 
     optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=None, decay=weight_decay, amsgrad=True)
     refined_mask_model.compile(optimizer=optimizer,
