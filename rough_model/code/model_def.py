@@ -1,13 +1,11 @@
 import sys
 
-from keras.layers import Input, Conv2D, MaxPooling2D, ZeroPadding2D, Activation, add, Add, UpSampling2D
-from keras.optimizers import Adam
-from keras.utils import multi_gpu_model
-from keras.layers.normalization import BatchNormalization
-from keras.models import Model
-from keras import initializers
-from keras.engine import Layer, InputSpec
-from keras import backend as K
+from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, ZeroPadding2D, Activation, add, Add, UpSampling2D, Layer, InputSpec
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.models import Model
+from tensorflow.keras import initializers
+from tensorflow.keras import backend as K
 
 sys.setrecursionlimit(3000)
 
@@ -59,7 +57,7 @@ class Scale(Layer):
 
         self.gamma = K.variable(self.gamma_init(shape), name='%s_gamma' % self.name)
         self.beta = K.variable(self.beta_init(shape), name='%s_beta' % self.name)
-        self.trainable_weights = [self.gamma, self.beta]
+        self._trainable_weights = [self.gamma, self.beta]
 
         if self.initial_weights is not None:
             self.set_weights(self.initial_weights)
@@ -261,17 +259,15 @@ def dice_coef_loss(y_true, y_pred):
     return 1 - dice_coef(y_true, y_pred)
 
 
-def get_model(weights_file='rough_model_weights.h5', learning_rate=0.001, weight_decay=0.0, no_gpus=1):
+def get_model(weights_file=None, learning_rate=0.001, weight_decay=0.0):
     # create the rough mask model and load the weights
 
-    if no_gpus > 1:
-        rough_mask_model = multi_gpu_model(resnet152_model(1, weights_path=weights_file), gpus=no_gpus)
-    else:
-        rough_mask_model = resnet152_model(1, weights_path=weights_file)
+    rough_mask_model = resnet152_model(1, weights_path=weights_file)
 
     optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=None, decay=weight_decay, amsgrad=True)
     rough_mask_model.compile(optimizer=optimizer,
                              loss=dice_coef_loss, metrics=[dice_coef, 'accuracy', 'binary_crossentropy'])
 
-    #rough_mask_model.load_weights(weights_file)
+    if weights_file is not None:
+        rough_mask_model.load_weights(weights_file)
     return rough_mask_model
